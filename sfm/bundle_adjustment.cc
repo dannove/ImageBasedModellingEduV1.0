@@ -456,16 +456,22 @@ BundleAdjustment::analytic_jacobian_entries (
     double const rx = r[0] * p3d[0] + r[1] * p3d[1] + r[2] * p3d[2];
     double const ry = r[3] * p3d[0] + r[4] * p3d[1] + r[5] * p3d[2];
     double const rz = r[6] * p3d[0] + r[7] * p3d[1] + r[8] * p3d[2];
+    /* px py pz 相机坐标系下三维点坐标, 即xc, yc, zc */
     double const px = rx + t[0];
     double const py = ry + t[1];
     double const pz = rz + t[2];
+    /* ix, iy 归一化平面坐标系坐标*/
     double const ix = px / pz;
     double const iy = py / pz;
+    /* todo fz? */
     double const fz = cam.focal_length / pz;
+
     double const radius2 = ix * ix + iy * iy;
+
     double const rd_factor = 1.0 + (k[0] + k[1] * radius2) * radius2;
 
     /* Compute exact camera and point entries if intrinsics are fixed */
+    /* 固定内参， 即u_deriv_f 和 u_deriv_d 都为0 */
     if (this->opts.fixed_intrinsics)
     {
         cam_x_ptr[0] = fz * rd_factor;
@@ -510,6 +516,7 @@ BundleAdjustment::analytic_jacobian_entries (
     /*
      * Compute approximations of the Jacobian entries for the extrinsics
      * by assuming the distortion coefficent D(ix, iy) is constant.
+     * 固定径向畸变
      */
     cam_x_ptr[3] = fz * rd_factor;
     cam_x_ptr[4] = 0.0;
@@ -580,7 +587,8 @@ BundleAdjustment::analytic_jacobian_entries (
      */
     double const f = cam.focal_length;
 
-    // rd--ratial distortion  rad--radius2
+    // rd--ratial distortion 径向畸变  rad--radius2 r2
+    //偏导数命名规则 [A_deriv_B] A关于B求导
     double const rd_deriv_rad = k[0] + 2.0 * k[1] * radius2;
 
     double const rad_deriv_px = 2.0 * ix / pz;
@@ -600,6 +608,8 @@ BundleAdjustment::analytic_jacobian_entries (
     double const iy_deriv_py = 1 / pz;//
     double const iy_deriv_pz = -iy / pz;//
 
+    /* r0 r1 r2 即旋转向量 w0 w1 w2, 这里求导需要用到左扰动模型 */
+    /* ix_deriv_r0 = ix_deriv_px * px_deriv_r0 + ix_deriv_pz * pz_deriv_r0 */
     double const ix_deriv_r0 = -ix * ry / pz;
     double const ix_deriv_r1 = (rz + rx * ix) / pz;
     double const ix_deriv_r2 = -ry / pz;
@@ -616,6 +626,7 @@ BundleAdjustment::analytic_jacobian_entries (
     double const rd_deriv_r1 = rd_deriv_rad * rad_deriv_r1;
     double const rd_deriv_r2 = rd_deriv_rad * rad_deriv_r2;
 
+    /* ix_deriv_X0 = ix_deriv_px * px_deriv_X0 + ix_deriv_pz * pz_deriv_X0  */
     double const ix_deriv_X0 = (r[0] - r[6] * ix) / pz;
     double const ix_deriv_X1 = (r[1] - r[7] * ix) / pz;
     double const ix_deriv_X2 = (r[2] - r[8] * ix) / pz;
@@ -636,6 +647,7 @@ BundleAdjustment::analytic_jacobian_entries (
      * Compute translation derivatives
      * NOTE: px_deriv_t0 = 1
      */
+    /* [3] [4] [5] [6] [7] [8] 对应 t0 t1 t2 w0 w1 w2 */
     cam_x_ptr[3] = f * (rd_deriv_px * ix + rd_factor * ix_deriv_px);
     cam_x_ptr[4] = f * (rd_deriv_py * ix); // + rd_factor * ix_deriv_py = 0
     cam_x_ptr[5] = f * (rd_deriv_pz * ix + rd_factor * ix_deriv_pz);

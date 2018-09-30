@@ -216,6 +216,16 @@ LinearSolver::solve_schur (SparseMatrixType const& jac_cams,
     CGSolver::Status cg_status;
     cg_status = solver.solve(S, rhs, &delta_y, &precond);
 
+    /* fixme 内参平均处理 */
+    /*
+    delta_y[0] = (delta_y[0] + delta_y[9])/2;
+    delta_y[9] = delta_y[0];
+    delta_y[1] = (delta_y[1] + delta_y[10])/2;
+    delta_y[10] = delta_y[1];
+    delta_y[2] = (delta_y[2] + delta_y[11])/2;
+    delta_y[11] = delta_y[2];
+    */
+
     Status status;
     status.num_cg_iterations = cg_status.num_iterations;
     switch (cg_status.info)

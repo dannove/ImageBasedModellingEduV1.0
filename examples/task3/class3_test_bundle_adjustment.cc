@@ -2,28 +2,47 @@
 #include <sfm/ransac_fundamental.h>
 #include <core/image_exif.h>
 #include <fstream>
-#include "math/matrix.h"
-#include "math/vector.h"
 
 #include "core/image_io.h"
-#include "core/image.h"
 #include "core/image_tools.h"
 
-#include "sfm/camera_pose.h"
-#include "sfm/fundamental.h"
-
 #include "sfm/feature_set.h"
-#include "sfm/correspondence.h"
 #include "sfm/bundle_adjustment.h"
-#include "sfm/correspondence.h"
 
 #include "sfm/camera_database.h"
 #include "sfm/extract_focal_length.h"
 
 #include "sfm/triangulate.h"
-
+#include "assert.h"
+#include "visualizer.h"
 #define MAX_PIXELS 1000000
 
+
+core::ByteImage::Ptr
+visualize_matching(features::Matching::Result const & matching,
+        core::ByteImage::Ptr image1, core::ByteImage::Ptr image2,
+        std::vector<math::Vec2f> const& pos1, std::vector<math::Vec2f> const& pos2)
+{
+    /*Visualize keypoints*/
+    sfm::Correspondences2D2D vis_matches;
+
+    for(std::size_t i = 0; i < matching.matches_1_2.size(); ++i)
+    {
+        if(matching.matches_1_2[i] < 0)
+            continue;
+        int const  j = matching.matches_1_2[i];
+
+        sfm::Correspondence2D2D match;
+        std::copy(pos1[i].begin(), pos1[i].end(), match.p1);
+        std::copy(pos2[j].begin(), pos2[j].end(), match.p2);
+        vis_matches.push_back(match);
+    }
+    std::cout << "Drawing" << vis_matches.size() << "matches..." << std::endl;
+    core::ByteImage::Ptr match_image = sfm::Visualizer::draw_matches(
+            image1, image2, vis_matches
+    );
+    return  match_image;
+}
 
 void convert_sift_discriptors(features::Sift::Descriptors const&sift_descrs,
                               util::AlignedMemory<math::Vec128f, 16> *aligned_descr)
@@ -50,23 +69,29 @@ float extract_focal_len(const std::string& img_name)
 
 
 sfm::Correspondences2D2D sift_feature_matching(sfm::FeatureSet &feat1
-        , sfm::FeatureSet&feat2)
+        , sfm::FeatureSet&feat2
+        ,core::ByteImage::Ptr image1, core::ByteImage::Ptr image2)
 {
 
     /* 1.0 特征匹配*/
     // 进行数据转换
+    //将描述子转成特定的内存格式
     util::AlignedMemory<math::Vec128f, 16> aligned_descrs1, aligned_descrs2;
     convert_sift_discriptors(feat1.sift_descriptors, &aligned_descrs1);
     convert_sift_discriptors(feat2.sift_descriptors, &aligned_descrs2);
 
     // 特征匹配参数设置
     features::Matching::Options matching_opts;
+    //特征描述子长度，sift 128
     matching_opts.descriptor_length = 128;
+    //最近邻阈值
     matching_opts.distance_threshold = 1.0f;
+    //最近邻与次近邻比值
     matching_opts.lowe_ratio_threshold = 0.8f;
 
     // 特征匹配
     features::Matching::Result matching_result;
+    //双向匹配
     features::Matching::twoway_match(matching_opts, aligned_descrs1.data()->begin()
             , feat1.sift_descriptors.size()
             ,aligned_descrs2.data()->begin()
@@ -77,6 +102,48 @@ sfm::Correspondences2D2D sift_feature_matching(sfm::FeatureSet &feat1
     std::cout << "Consistent Sift Matches: "
               << n_consitent_matches
               << std::endl;
+
+    /*特征匹配可视化*/
+    /*Draw features*/
+    std::vector<sfm::Visualizer::Keypoint> features1;
+    for(std::size_t i=0; i<feat1.sift_descriptors.size(); ++i)
+    {
+        if(matching_result.matches_1_2[i] == -1)
+            continue;
+        sfm::Sift::Descriptor const& desc = feat1.sift_descriptors[i];
+        sfm::Visualizer::Keypoint kpt;
+        kpt.orientation = desc.orientation;
+        kpt.radius = desc.scale*3.0f;
+        kpt.x = desc.x;
+        kpt.y = desc.y;
+        features1.push_back(kpt);
+    }
+
+    std::vector<sfm::Visualizer::Keypoint> features2;
+    for(std::size_t i =0; i<feat2.sift_descriptors.size(); ++i)
+    {
+        if(matching_result.matches_2_1[i] == -1)
+            continue;
+        sfm::Sift::Descriptor const& desc = feat1.sift_descriptors[i];
+        sfm::Visualizer::Keypoint kpt;
+        kpt.orientation = desc.orientation;
+        kpt.radius = desc.scale*3.0f;
+        kpt.x = desc.x;
+        kpt.y = desc.y;
+        features2.push_back(kpt);
+
+    }
+
+    image1 = sfm::Visualizer::draw_keypoints(image1,
+            features1, sfm::Visualizer::RADIUS_BOX_ORIENTATION);
+    image2 = sfm::Visualizer::draw_keypoints(image2,
+            features2, sfm::Visualizer::RADIUS_BOX_ORIENTATION);
+
+    core::ByteImage::Ptr match_image = visualize_matching(matching_result,
+                image1, image2, feat1.positions, feat2.positions);
+    std::string output_imagename = "./tmp/test_matching.png";
+    std::cout << "Saving visualizing image to " << output_imagename << std::endl;
+    core::image::save_file(match_image, output_imagename);
 
     /*2.0 利用本征矩阵对数据进行*/
     // 进行特征点坐标归一化，归一化之后坐标中心位于(0,0), 范围[-0.5, 0.5]。坐标归一化有助于
@@ -206,7 +273,7 @@ main (int argc, char *argv[])
               << feat2.sift_descriptors.size() << " descriptors." << std::endl;
 
     // 对特征坐标进行归一化，使得求解计算稳定
-    sfm::Correspondences2D2D corrs = sift_feature_matching(feat1, feat2);
+    sfm::Correspondences2D2D corrs = sift_feature_matching(feat1, feat2, img1, img2);
     std::cout<<"Number of Matching pairs is "<< corrs.size()<<std::endl;
 
 //    std::cout<<"correspondence: "<<std::endl;
@@ -257,12 +324,12 @@ main (int argc, char *argv[])
     cams[0].focal_length = pose1.get_focal_length();
     std::copy(pose1.t.begin(), pose1.t.end(), cams[0].translation);
     std::copy(pose1.R.begin(), pose1.R.end(), cams[0].rotation);
-    std::fill(cams[0].distortion, cams[0].distortion + 2, 0.0);
 
     out<<cams[0].focal_length<<" ";
     out<<cams[0].distortion[0]<<" "<< cams[0].distortion[1]<<" ";
     for(int i=0; i<3; i++) out<<cams[0].translation[i]<<" ";
     for(int i=0; i<9; i++) out<<cams[0].rotation[i]<<" ";
+    std::fill(cams[0].distortion, cams[0].distortion + 2, 0.0);
     out<<std::endl;
 
     cams[1].focal_length = pose2.get_focal_length();
@@ -312,7 +379,7 @@ main (int argc, char *argv[])
         observations.push_back(obs2);
     }
 
-    out<<"n_observations "<<observations.size()<<std::endl;
+    std::cout<<"n_observations "<<observations.size()<<std::endl;
     for(int i=0; i<observations.size(); i++){
         out<<observations[i].camera_id<<" "<<observations[i].point_id<<" "
            <<observations[i].pos[0]<<" "<<observations[i].pos[1]<<std::endl;
