@@ -262,6 +262,40 @@ from_gray_code (int gc)
     return ret;
 }
 
+/**
+* @brief Convert an angle from degree to radian
+* @param degree Angle in degree
+* @return Same angle in radian
+* @note Assuming input angle is in range [0;360]
+*/
+inline double D2R( double degree )
+{
+    return degree * M_PI / 180.0;
+}
+
+/**
+* @brief Convert an angle from radian to degree
+* @param radian Angle in radian
+* @return Same angle in degree
+* @note Assuming input angle in range [0;2Pi]
+*/
+inline double R2D( double radian )
+{
+    return radian / M_PI * 180.0;
+}
+
+/**
+* @brief Compute square of a number
+* @tparam T Type of the number to square
+* @param x Input number
+* @return square of x
+*/
+template<typename T>
+inline T Square( T x )
+{
+   return x * x;
+}
+
 MATH_NAMESPACE_END
 
 #endif // MATH_FUNCTIONS_HEADER

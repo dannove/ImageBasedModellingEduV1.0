@@ -31,7 +31,8 @@ set(HEADERS
         bundler_intrinsics.h
         bundler_tracks.h
         bundler_incremental.h
-        bundler_init_pair.h
+        bundler_init_pair_without_homography_check.h
+        geodesy.h
         )
 
 set(SOURCE_FILES
@@ -54,7 +55,8 @@ set(SOURCE_FILES
         bundler_intrinsics.cc
         bundler_tracks.cc
         bundler_incremental.cc
-        bundler_init_pair.cc
+        bundler_init_pair_without_homography_check.cc
+        camera_pose.cpp
         )
 add_library(sfm ${HEADERS} ${SOURCE_FILES})
 #target_link_libraries(sfm core util features)

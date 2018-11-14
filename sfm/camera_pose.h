@@ -17,9 +17,16 @@
 #include "math/matrix_tools.h"
 #include "sfm/defines.h"
 #include "sfm/correspondence.h"
-
+#include <Eigen/StdVector>
+#include <unsupported/Eigen/NonLinearOptimization>
+#include <Eigen/Geometry>
 SFM_NAMESPACE_BEGIN
 
+using Mat = Eigen::MatrixXd;
+/// 3d vector using double internal format
+using Vec3 = Eigen::Vector3d;
+/// 3x3 matrix using double internal format
+using Mat3 = Eigen::Matrix<double, 3, 3>;
 /**
  * The camera pose is the 3x4 matrix P = K [R | t]. K is the 3x3 calibration
  * matrix, R a 3x3 rotation matrix and t a 3x1 translation vector.
@@ -50,6 +57,13 @@ public:
     void fill_camera_pos (math::Vector<double, 3>* camera_pos) const;
     /** Returns true if K matrix is valid (non-zero focal length). */
     bool is_valid (void) const;
+    static bool FindRTS(
+            const Mat &x1,
+            const Mat &x2,
+            double * S,
+            Vec3 * t,
+            Mat3 * R
+    );
 
 public:
     math::Matrix<double, 3, 3> K;
@@ -108,6 +122,7 @@ CameraPose::is_valid (void) const
 {
     return this->K[0] != 0.0;
 }
+
 
 SFM_NAMESPACE_END
 

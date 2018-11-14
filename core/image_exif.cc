@@ -261,9 +261,9 @@ exif_extract (char const* data, std::size_t len, bool is_jpeg)
                 exif_sub_ifd_offset = tiff_header_offset + coffs;
                 break;
 
-            //case 0x8825: // GPS IFS offset.
-            //    gps_sub_ifd_offset = tiff_header_offset + coffs;
-            //    break;
+            case 0x8825: // GPS IFS offset.
+              //  gps_sub_ifd_offset = tiff_header_offset + coffs;
+                break;
 
             case 0x102: // Bits per color sample.
                 if (type == EXIF_TYPE_USHORT)

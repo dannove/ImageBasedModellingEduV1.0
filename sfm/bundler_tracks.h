@@ -47,6 +47,14 @@ public:
     void compute (PairwiseMatching const& matching,
         ViewportList* viewports, TrackList* tracks);
 
+    /*
+         * 输出pairwise matches 数据到json文件中
+         */
+
+    void write_pairwisematching(PairwiseMatching const & matching
+    );
+    void write_viewportlist(ViewportList * viewports);
+
 private:
     int remove_invalid_tracks (ViewportList* viewports, TrackList* tracks);
 

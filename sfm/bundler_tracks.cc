@@ -13,10 +13,11 @@
 #include "core/image_tools.h"
 #include "core/image_drawing.h"
 #include "sfm/bundler_tracks.h"
-
+#include "json/json.h"
+#include "fstream"
 SFM_NAMESPACE_BEGIN
 SFM_BUNDLER_NAMESPACE_BEGIN
-
+using namespace std;
 /*
  * Merges tracks and updates viewports accordingly.
  */
@@ -73,6 +74,8 @@ Tracks::compute (PairwiseMatching const& matching,
         for (std::size_t j = 0; j < tvm.matches.size(); ++j)
         {
             CorrespondenceIndex idx = tvm.matches[j];
+
+
             int const view1_tid = viewport1.track_ids[idx.first];
             int const view2_tid = viewport2.track_ids[idx.second];
             if (view1_tid == -1 && view2_tid == -1)
@@ -124,7 +127,9 @@ Tracks::compute (PairwiseMatching const& matching,
     if (this->opts.verbose_output)
         std::cout << " deleted " << num_invalid_tracks << " tracks." << std::endl;
 
-    /* Compute color for every track. */
+   /*
+    * /* Compute color for every track.
+    * */
     if (this->opts.verbose_output)
         std::cout << "Colorizing tracks..." << std::endl;
     for (std::size_t i = 0; i < tracks->size(); ++i)
@@ -142,9 +147,94 @@ Tracks::compute (PairwiseMatching const& matching,
         track.color[1] = static_cast<uint8_t>(color[1] / color[3] + 0.5f);
         track.color[2] = static_cast<uint8_t>(color[2] / color[3] + 0.5f);
     }
+
+}
+
+void
+Tracks::write_viewportlist(ViewportList * viewports)
+{
+    Json::Value root;
+    Json::StreamWriterBuilder builder;
+    for(int i = 0 ; i< viewports->size(); ++i){
+        Viewport const & vp = viewports->at(i);
+        Json::Value viewport;
+        viewport["forcllength"] = vp.focal_length;
+        Json::Value features;
+        {
+            features["width"] = vp.features.width;
+            features["height"] = vp.features.height;
+            Json::Value positions;
+            Json::Value colors;
+            for(int j=0; j< vp.features.positions.size(); ++j)
+            {
+                Json::Value point;
+                point["x"] = vp.features.positions[j][0];
+                point["y"] = vp.features.positions[j][1];
+                positions[j] = point;
+                Json::Value color;
+                color["r"] = vp.features.colors[j][0];
+                color["g"] = vp.features.colors[j][1];
+                color["b"] = vp.features.colors[j][2];
+                colors[j] = color;
+            }
+            features["positions"] = positions;
+            features["colors"] = colors;
+        }
+        viewport["features"] = features;
+        root[i] = viewport;
+    }
+   //string json_file = writer.write(root);
+    string json_file = Json::writeString(builder, root);
+
+    std::ofstream ofs ;
+    ofs.open("./viewports.json");
+    ofs << json_file;
+    ofs.close();
+
+
 }
 
 /* ---------------------------------------------------------------- */
+        /*
+         * 输出pairwise matches 数据到json文件中
+         */
+
+        void
+       Tracks:: write_pairwisematching(PairwiseMatching const & matching
+                                          )
+        {
+
+            Json::Value root;
+            Json::StreamWriterBuilder builder;
+            for (int i = 0; i < matching.size(); ++i) {
+                TwoViewMatching const &pwm = matching[i];
+                Json::Value tvm;
+                tvm["view_1_id"] = pwm.view_1_id;
+                tvm["view_2_id"] = pwm.view_2_id;
+                Json::Value matches;
+                /* Iterate over matches for a pair. */
+                for (int j = 0; j < pwm.matches.size(); ++j) {
+                    CorrespondenceIndex idx = pwm.matches[j];
+                    Json::Value match;
+                    match["first"] = idx.first;
+                    match["second"] = idx.second;
+                    matches[j] = match;
+                }
+                tvm["matches"] = matches;
+                root[i] = tvm;
+            }
+
+            std::string json_file = Json::writeString(builder, root);
+
+            std::ofstream ofs ;
+            ofs.open("./pwm.json");
+            ofs << json_file;
+            ofs.close();
+
+
+        }
+
+
 
 int
 Tracks::remove_invalid_tracks (ViewportList* viewports, TrackList* tracks)

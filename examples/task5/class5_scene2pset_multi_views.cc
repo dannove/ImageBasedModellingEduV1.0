@@ -23,6 +23,7 @@
 #include "core/mesh_tools.h"
 #include "core/scene.h"
 #include "core/view.h"
+#include "assert.h"
 
 
 struct AppSettings
@@ -171,7 +172,7 @@ main (int argc, char** argv)
 
     /* Write mesh to disc. */
     std::cout << "Writing final point set (" << verts.size() << " points)..." << std::endl;
-    assert(util::string::right(arg.outmesh, 4) == ".ply");
+    assert(util::string::right(conf.outmesh, 4) == ".ply");
     {
         core::geom::SavePLYOptions opts;
         opts.write_vertex_normals = conf.with_normals;

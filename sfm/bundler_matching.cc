@@ -23,6 +23,7 @@
 #include <features/cascade_hashing.h>
 
 
+
 SFM_NAMESPACE_BEGIN
 SFM_BUNDLER_NAMESPACE_BEGIN
 
@@ -133,7 +134,9 @@ Matching::compute (PairwiseMatching* pairwise_matching)
 
     std::cout << "\rFound a total of " << pairwise_matching->size()
         << " matching image pairs." << std::endl;
+
 }
+
 
 void
 Matching::two_view_matching (int view_1_id, int view_2_id,

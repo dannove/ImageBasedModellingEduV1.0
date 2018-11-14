@@ -42,3 +42,8 @@ set(POSE_FROM_FUNDAMENTAL
         )
 add_executable(task2_test_pose_from_fundamental ${POSE_FROM_FUNDAMENTAL} )
 target_link_libraries(task2_test_pose_from_fundamental sfm util core features )
+
+set(HOMOGRAPHY_DLT
+        class2_test_homography_dlt.cc)
+add_executable(task2_test_homography_dlt ${HOMOGRAPHY_DLT} )
+target_link_libraries(task2_test_homography_dlt sfm util core features)
