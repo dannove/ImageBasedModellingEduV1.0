@@ -13,7 +13,7 @@
 #include "core/image_tools.h"
 #include "core/image_drawing.h"
 #include "sfm/bundler_tracks.h"
-#include "json/json.h"
+#include "jsoncpp/json/json.h"
 #include "fstream"
 SFM_NAMESPACE_BEGIN
 SFM_BUNDLER_NAMESPACE_BEGIN

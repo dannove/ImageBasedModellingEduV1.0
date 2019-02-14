@@ -64,8 +64,8 @@ using namespace math;
                         double lat,
                         double lon,
                         double alt,
-                        double a = WGS84_A,
-                        double b = WGS84_B
+                        double a = WGS84_A,  //长轴
+                        double b = WGS84_B   //短轴
                 )
         {
             a /= 1000; // meters to kilometers

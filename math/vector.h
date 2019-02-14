@@ -26,9 +26,11 @@ MATH_NAMESPACE_BEGIN
  * Vector type definitions for convenience.
  */
 template <typename T, int N> class Vector;
+
 typedef Vector<float,1> Vec1f;
 typedef Vector<float,2> Vec2f;
 typedef Vector<float,3> Vec3f;
+    typedef Vector<Vec3f, 4> Corners;
 typedef Vector<float,4> Vec4f;
 typedef Vector<float,5> Vec5f;
 typedef Vector<float,6> Vec6f;
